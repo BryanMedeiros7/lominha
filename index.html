@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Especial pra você ❤️</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#ff4d6d;--muted:#97a0b3}
+    *{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#081025 0%, #0f1724 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .container{width:100%;max-width:420px}
+
+    header{margin-bottom:18px;text-align:center}
+    header h1{font-size:20px;margin:0}
+    header p{margin:6px 0 0;color:var(--muted);font-size:14px}
+
+    .stage{position:relative;height:640px}
+    .cards{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+    .card{width:340px;height:540px;border-radius:18px;background:var(--card);box-shadow:0 10px 30px rgba(2,6,23,.6);overflow:hidden;position:absolute;display:flex;flex-direction:column;transition:transform .35s ease,opacity .35s ease}
+    .card img{width:100%;height:65%;object-fit:cover}
+    .card .info{padding:14px;flex:1;display:flex;flex-direction:column;justify-content:space-between}
+    .name{font-weight:700;font-size:20px}
+    .bio{color:var(--muted);margin-top:8px;font-size:14px}
+
+    .controls{display:flex;justify-content:center;gap:24px;margin-top:16px}
+    .btn{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.06);border:0;color:#fff;font-size:26px;cursor:pointer;box-shadow:0 6px 18px rgba(2,6,23,.5)}
+    .btn.like{background:linear-gradient(180deg,var(--accent),#ff738c)}
+
+    /* dramático dislike */
+    .toast{position:absolute;left:50%;transform:translateX(-50%);bottom:50%;background:rgba(255,0,64,.95);padding:20px 28px;border-radius:16px;color:#fff;font-weight:700;font-size:20px;box-shadow:0 8px 20px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .3s ease,transform .3s ease;z-index:50}
+    .toast.show{opacity:1;transform:translate(-50%,-50%) scale(1.1)}
+
+    /* heart animation */
+    .hearts{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+    .heart{width:48px;height:48px;opacity:0;transform:scale(.4);animation:pop .9s forwards}
+    @keyframes pop{0%{opacity:0;transform:translateY(8px) scale(.6)}30%{opacity:1;transform:translateY(0) scale(1.2)}100%{opacity:0;transform:translateY(-120px) scale(.6)}}
+
+    /* final screen */
+    .final{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(2,6,23,.94) 0%, rgba(2,6,23,.98) 100%);z-index:60;padding:20px}
+    .final .card{width:92%;max-width:560px;height:auto;padding-bottom:18px}
+    .final h2{margin:18px 0 6px;text-align:center}
+    .final p{color:var(--muted);text-align:center}
+    .btn-surpresa{display:block;margin:18px auto 0;padding:12px 18px;border-radius:10px;background:var(--accent);border:0;color:white;font-weight:700;cursor:pointer;font-size:16px}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    @media(max-width:420px){.card{width:90%;height:60vh}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Já que você nunca vai ter a experiência do Tinder…</h1>
+      <p>fiz um especial só pra você ❤️</p>
+    </header>
+
+    <div class="stage">
+      <div class="cards" id="cards"></div>
+
+      <div class="toast" id="toast">Você me odeia? 💔</div>
+
+      <div class="hearts" id="hearts"></div>
+
+      <div style="position: absolute;left:50%;transform:translateX(-50%);bottom:28px;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center">
+        <div class="controls">
+          <button class="btn dislike" id="btnDislike">✖</button>
+          <button class="btn like" id="btnLike">❤️</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>Toque nos corações ou no X — e desbloqueie o match perfeito.</footer>
+  </div>
+
+  <!-- final overlay -->
+  <div class="final" id="final">
+    <div class="card">
+      <img src="photos/final.jpg" alt="Foto final" style="width:100%;height:300px;object-fit:cover"/>
+      <div class="info">
+        <div style="text-align:center">
+          <h2>Match Perfeito 💖</h2>
+          <p>Parabéns! Você acabou de encontrar todas as versões favoritas de mim.</p>
+        </div>
+        <div style="text-align:center">
+          <button class="btn-surpresa" id="btnSurpresa">Surpresa</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <audio id="song" src="audio/tchubiradaun.mp3"></audio>
+
+  <script>
+    const profiles = [
+      {img:'photos/you1.jpg', name:'Seu Amor', bio:'Profissional em te amar desde 2008'},
+      {img:'photos/you2.jpg', name:'wiwiwi', bio:'Fofinho toda vez que se sente amado'},
+      {img:'photos/you3.jpg', name:'Stitch', bio:'Atentado e te faz rir'},
+      {img:'photos/you4.jpg', name:'Cirilo', bio:'Sempre se declara para você'},
+      {img:'photos/you5.jpg', name:'Tigrinho', bio:'Rouba seu coração.'}
+    ];
+
+    const cardsEl = document.getElementById('cards');
+    const toast = document.getElementById('toast');
+    const hearts = document.getElementById('hearts');
+    const final = document.getElementById('final');
+    const song = document.getElementById('song');
+
+    function renderCards(){
+      cardsEl.innerHTML='';
+      for(let i=profiles.length-1;i>=0;i--){
+        const p = profiles[i];
+        const el = document.createElement('div');
+        el.className='card';
+        el.innerHTML = `<img src="${p.img}" alt="${p.name}"><div class="info"><div><div class="name">${p.name}</div><div class="bio">${p.bio}</div></div><div style=\"text-align:right;color:var(--muted);font-size:13px\">Arraste pro lado ou use os botões</div></div>`;
+        addDragHandlers(el);
+        cardsEl.appendChild(el);
+      }
+    }
+
+    function addDragHandlers(card){
+      let startX=null, currentX=0, pressed=false;
+      function onStart(e){pressed=true; startX=(e.touches?e.touches[0].clientX:e.clientX); card.style.transition='none';}
+      function onMove(e){if(!pressed) return; currentX=(e.touches?e.touches[0].clientX:e.clientX)-startX; card.style.transform = `translateX(${currentX}px) rotate(${currentX/12}deg)`;}
+      function onEnd(){
+        if(!pressed) return; pressed=false; card.style.transition='transform .35s ease';
+        if(Math.abs(currentX) > 120){
+          if(currentX > 0){ animateLike(card); removeTopCard(); }
+          else { showHateToast(); removeTopCard(); }
+        } else { card.style.transform='translateX(0) rotate(0)'; }
+        currentX=0;
+      }
+      card.addEventListener('mousedown',onStart);
+      card.addEventListener('touchstart',onStart);
+      window.addEventListener('mousemove',onMove);
+      window.addEventListener('touchmove',onMove);
+      window.addEventListener('mouseup',onEnd);
+      window.addEventListener('touchend',onEnd);
+    }
+
+    function removeTopCard(){
+      const top = cardsEl.querySelector('.card:last-child');
+      if(!top) return;
+      top.style.transform = 'scale(.9) translateY(-40px)';
+      top.style.opacity='0';
+      setTimeout(()=>{ top.remove(); checkEnd(); },360);
+    }
+
+    function animateLike(){
+      const h = document.createElement('div');
+      h.className='heart';
+      h.innerText='❤️';
+      hearts.appendChild(h);
+      setTimeout(()=>h.remove(),900);
+    }
+
+    function showHateToast(){
+      toast.classList.add('show');
+      setTimeout(()=>toast.classList.remove('show'),2000);
+    }
+
+    document.getElementById('btnLike').addEventListener('click',()=>{
+      const top = cardsEl.querySelector('.card:last-child'); if(!top) return;
+      animateLike(); removeTopCard();
+    });
+    document.getElementById('btnDislike').addEventListener('click',()=>{
+      const top = cardsEl.querySelector('.card:last-child'); if(!top) return;
+      showHateToast();
+      top.style.transition='transform .45s ease,opacity .45s ease';
+      top.style.transform='translateX(-420px) rotate(-24deg)';
+      top.style.opacity='0';
+      setTimeout(()=>{ if(top) top.remove(); checkEnd(); },460);
+    });
+
+    function checkEnd(){
+      const remaining = cardsEl.querySelectorAll('.card').length;
+      if(remaining === 0){ final.style.display='flex'; }
+    }
+
+    document.getElementById('btnSurpresa').addEventListener('click',()=>{
+      song.play();
+    });
+
+    renderCards();
+  </script>
+</body>
+</html>
